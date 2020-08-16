@@ -18,46 +18,38 @@ export async function initContract() {
   // Initializing our contract APIs by contract name and configuration
   window.contract = await new Contract(window.walletConnection.account(), nearConfig.contractName, {
     // View methods are read only. They don't modify the state, but usually return some value.
-    viewMethods: ['getGreeting'],
+    viewMethods: [
+      'isOwner',
+      'get_total_supply',
+      'get_balance',
+      'get_allowance',
+      'getTokenName',
+      'getTokenSymbol',
+      'getPrecision',
+      'getInitialSupply',
+      'getOwner',
+      'getInit'
+    ],
     // Change methods can modify the state. But you don't receive the returned value when called.
-    changeMethods: ['setGreeting'],
+    changeMethods: [
+      'init',
+      'inc_allowance',
+      'dec_allowance',
+      'transfer_from',
+      'transfer',
+      'burn',
+      'mint',
+      'transferOwnership'
+    ],
   })
-}
-
-// attached to the form used to update the greeting
-// in utils because it works with a vanilla JS or a React approach
-export async function onSubmit(event) {
-  event.preventDefault()
-
-  // get elements from the form using their id attribute
-  const { fieldset, greeting } = event.target.elements
-
-  // disable the form while the value gets updated on-chain
-  fieldset.disabled = true
-
-  try {
-    // make an update call to the smart contract
-    await contract.setGreeting({
-      // pass the value that the user entered in the greeting field
-      message: greeting.value
-    })
-  } catch (e) {
-    alert(
-      'Something went wrong! ' +
-      'Maybe you need to sign out and back in? ' +
-      'Check your browser console for more info.'
-    )
-    throw e
-  } finally {
-    // re-enable the form, whether the call succeeded or failed
-    fieldset.disabled = false
-  }
 }
 
 export function logout() {
   window.walletConnection.signOut()
   // reload page
-  window.location.replace(window.location.origin + window.location.pathname)
+ // window.location.replace(window.location.origin + window.location.pathname)
+ window.location.replace(window.location.origin)
+ 
 }
 
 export function login() {

@@ -1,8 +1,8 @@
   
 // @nearfile
-import { Context, storage, logging, env, u128 } from "near-sdk-as";
+import { Context, storage, logging, env, u128 } from "near-sdk-as"
 import { AccountId, Amount } from './ft-types'
-import { totalSupply, allowanceRegistry, balanceRegistry } from './ft-models'
+import { supply, allowanceRegistry, balanceRegistry } from './ft-models'
 
 import {
     ERR_INVALID_AMOUNT,
@@ -19,6 +19,14 @@ import {
     ERR_NOT_ENOUGH_TOKENS
 } from './ft-error-messages'
 
+import {
+  recordApprovalEvent,
+  recordTransferEvent,
+  recordMintEvent,
+  recordBurnEvent,
+  recordOwnershipTransferEvent
+} from './ft-events'
+
 /**
  * Init function that creates a new fungible token and initial supply
  * @param name 
@@ -26,9 +34,9 @@ import {
  * @param precision 
  * @param initialSupply 
  */
-export function init(name: string, symbol: string, precision: u8, initialSupply: u128): void {
-    logging.log("initialOwner: " + Context.predecessor);
-    assert(storage.get<string>("init") == null, ERR_TOKEN_ALREADY_MINTED);
+export function init(name: string, symbol: string, precision: u128, initialSupply: u128): boolean {
+    logging.log("initialOwner: " + Context.predecessor)
+    assert(storage.get<string>("init") == null, ERR_TOKEN_ALREADY_MINTED)
 
     //set Token Name
     storage.set<string>("tokenName", name)
@@ -37,21 +45,54 @@ export function init(name: string, symbol: string, precision: u8, initialSupply:
     storage.set<string>("tokenSymbol", symbol)
 
     //set Precision
-    storage.set<u8>("precision", precision)
+    storage.set<u128>("precision", precision)
 
     //set Total Supply
-    totalSupply.set('totalSupply', initialSupply);
+    supply.set('totalSupply', initialSupply)
+
+    //set Initial Supply
+    supply.set('initialSupply', initialSupply)
 
     // assign total initial supply to owner's balance
-    balanceRegistry.set(Context.predecessor, initialSupply);
+    balanceRegistry.set(Context.predecessor, initialSupply)
 
     //set contract owner
-    storage.set<string>("owner", Context.predecessor);
+    storage.set<string>("owner", Context.predecessor)
 
     //set init to done
     storage.set<string>("init", "done")
 
+    return true
   }
+
+/*********************/ 
+/* UTILITY FUNCTIONS */
+/*********************/
+
+/**
+ * Generate a consistent key format for looking up which 'owner_id' has given 
+ * an 'escrow_id' some 'allowance' to transfer on their behalf
+ * @param owner_id
+ * @param escrow_id
+ */
+
+export function keyFrom(owner_id: AccountId, escrow_id: AccountId): string {
+  assert(env.isValidAccountID(owner_id), ERR_INVALID_ACCOUNT_ID)
+  assert(env.isValidAccountID(escrow_id), ERR_INVALID_ACCOUNT_ID)
+  return owner_id + ":" + escrow_id
+}
+
+
+/**
+* Returns the owner which we use in multiple places to confirm user has access to 
+* do whatever they are trying to do.  Some things like minting, burning and so on
+* should only be done by the owner
+* @param owner 
+*/
+export function isOwner(owner: AccountId): boolean {
+  assert(env.isValidAccountID(owner), ERR_INVALID_ACCOUNT_ID)
+  return owner == storage.get<string>("owner")
+}
 
 /***************************/ 
 /* FUNGIBLE TOKEN STANDARD */
@@ -77,6 +118,10 @@ export function inc_allowance(escrow_account_id: AccountId, amount: Amount): voi
     const balance = allowanceRegistry.get(keyFrom(owner_id, escrow_account_id))
     if(u128.from(balance) > u128.Zero) {
       allowanceRegistry.set(keyFrom(owner_id, escrow_account_id), u128.from(u128.add(u128.from(balance), u128.from(amount)).lo))
+      const newBalance = allowanceRegistry.get(keyFrom(owner_id, escrow_account_id))
+      if(balance && newBalance) {
+        recordApprovalEvent(owner_id, escrow_account_id, balance, newBalance)
+        }
     } else {
       allowanceRegistry.delete(keyFrom(owner_id, escrow_account_id))
     }
@@ -102,6 +147,10 @@ export function inc_allowance(escrow_account_id: AccountId, amount: Amount): voi
       if(u128.from(balance) > u128.Zero) {
           assert(u128.sub(u128.from(balance), u128.from(amount)) > u128.Zero, ERR_DECREMENT_LESS_THAN_ZERO)
           allowanceRegistry.set(keyFrom(owner_id, escrow_account_id), u128.from(u128.sub(u128.from(balance), u128.from(amount)).lo))
+          const newBalance = allowanceRegistry.get(keyFrom(owner_id, escrow_account_id))
+          if(balance && newBalance) {
+          recordApprovalEvent(owner_id, escrow_account_id, balance, newBalance)
+          }
       } else {
         allowanceRegistry.delete(keyFrom(owner_id, escrow_account_id))
       }
@@ -143,6 +192,10 @@ export function inc_allowance(escrow_account_id: AccountId, amount: Amount): voi
   
     balanceRegistry.set(owner_id, u128.sub(balanceOfOwner, amount))
     balanceRegistry.set(new_owner_id, u128.add(balanceOfNewOwner, amount))
+
+    //record transfer event
+    let spender = Context.predecessor
+    recordTransferEvent(spender, owner_id, new_owner_id, amount)
   }
   
   
@@ -169,7 +222,7 @@ export function inc_allowance(escrow_account_id: AccountId, amount: Amount): voi
    * Returns total supply of tokens.
    */
   export function get_total_supply(): u128 {
-    return totalSupply.getSome('totalSupply')
+    return supply.getSome('totalSupply')
   }
   
   
@@ -213,9 +266,11 @@ export function inc_allowance(escrow_account_id: AccountId, amount: Amount): voi
     assert(isOwner(Context.predecessor), ERR_NOT_OWNER)
     const balance = get_balance(Context.predecessor)
     assert(balance >= tokens, ERR_NOT_ENOUGH_TOKENS)
-    let currentSupply = totalSupply.getSome('totalSupply')
-    totalSupply.set('totalSupply', u128.sub(currentSupply, tokens))
+    let currentSupply = supply.getSome('totalSupply')
+    supply.set('totalSupply', u128.sub(currentSupply, tokens))
     balanceRegistry.set(Context.predecessor, u128.sub(balance , tokens))
+    recordTransferEvent(Context.predecessor, '0x0', Context.predecessor, tokens)
+    recordBurnEvent(Context.predecessor, tokens)
     return true;
   }
   
@@ -225,10 +280,12 @@ export function inc_allowance(escrow_account_id: AccountId, amount: Amount): voi
  */
   export function mint(tokens: u128): boolean {
     assert(isOwner(Context.predecessor), ERR_NOT_OWNER)
-    let currentSupply = totalSupply.getSome('totalSupply')
-    totalSupply.set('totalSupply', u128.add(currentSupply, tokens))
+    let currentSupply = supply.getSome('totalSupply')
+    supply.set('totalSupply', u128.add(currentSupply, tokens))
     let currentBalance = get_balance(Context.predecessor)
-    balanceRegistry.set(Context.predecessor, u128.add(currentBalance, tokens));
+    balanceRegistry.set(Context.predecessor, u128.add(currentBalance, tokens))
+    recordTransferEvent(Context.predecessor, '0x0', Context.predecessor, tokens)
+    recordMintEvent(Context.predecessor, tokens)
     return true;
   }
  
@@ -240,6 +297,7 @@ export function inc_allowance(escrow_account_id: AccountId, amount: Amount): voi
     assert(isOwner(Context.predecessor), ERR_NOT_OWNER)
     assert(env.isValidAccountID(newOwner), ERR_INVALID_ACCOUNT_ID)
     storage.set<string>("owner", newOwner);
+    recordOwnershipTransferEvent(Context.predecessor, newOwner)
     return true;
   }
 
@@ -257,39 +315,34 @@ export function getTokenName(): string {
  * get token symbol
  */
 export function getTokenSymbol(): string {
-    return storage.getSome('tokenSymbol')
+    return storage.getSome<string>('tokenSymbol')
 }
 
 /**
  * returns number of decimals the token uses. e.g. 8 means to divide the token
  * amount by 100000000 to get its user representation
  */
-export function getPrecision(): u8 {
-    return storage.getSome<u8>('precision')
+export function getPrecision(): u128 {
+    return storage.getSome<u128>('precision')
 }
 
-/*********************/ 
-/* UTILITY FUNCTIONS */
-/*********************/
-
 /**
- * Generate a consistent key format for looking up which 'owner_id' has given 
- * an 'escrow_id' some 'allowance' to transfer on their behalf
- * @param owner_id
- * @param escrow_id
+ * returns initial supply that was set for the token
  */
-
-export function keyFrom(owner_id: AccountId, escrow_id: AccountId): string {
-    return owner_id + ":" + escrow_id
+export function getInitialSupply(): u128 {
+  return supply.getSome('initialSupply')
 }
 
+/**
+ * returns current token owner
+ */
+export function getOwner(): string {
+  return storage.getSome<string>("owner")
+}
 
 /**
- * Returns the owner which we use in multiple places to confirm user has access to 
- * do whatever they are trying to do.  Some things like minting, burning and so on
- * should only be done by the owner
- * @param owner 
+ * returns token init status
  */
-export function isOwner(owner: AccountId): boolean {
-    return owner == storage.get<string>("owner");
+export function getInit(): string {
+  return storage.getSome<string>("init")
 }
