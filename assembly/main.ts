@@ -1,8 +1,9 @@
   
 // @nearfile
-import { Context, storage, logging, env, u128 } from "near-sdk-as"
+import { Context, storage, logging, env, u128, PersistentDeque } from "near-sdk-as"
 import { AccountId, Amount } from './ft-types'
 import { supply, allowanceRegistry, balanceRegistry } from './ft-models'
+import { transferEvents, TransferEvent } from './ft-events'
 
 import {
     ERR_INVALID_AMOUNT,
@@ -108,7 +109,7 @@ export function isOwner(owner: AccountId): boolean {
  * @param escrow_account_id
  * @param amount
  */
-export function inc_allowance(escrow_account_id: AccountId, amount: Amount): void {
+export function inc_allowance(escrow_account_id: AccountId, amount: Amount): boolean {
     assert(amount > u128.Zero, ERR_INVALID_AMOUNT)
     assert(env.isValidAccountID(escrow_account_id), ERR_INVALID_ACCOUNT_ID)
     const owner_id = Context.predecessor
@@ -125,7 +126,7 @@ export function inc_allowance(escrow_account_id: AccountId, amount: Amount): voi
     } else {
       allowanceRegistry.delete(keyFrom(owner_id, escrow_account_id))
     }
-    
+    return true
   }
   
   
@@ -136,7 +137,7 @@ export function inc_allowance(escrow_account_id: AccountId, amount: Amount): voi
    * @param escrow_account_id
    * @param amount
    */
-  export function dec_allowance(escrow_account_id: AccountId, amount: Amount): void {
+  export function dec_allowance(escrow_account_id: AccountId, amount: Amount): boolean {
       assert(amount > u128.Zero, ERR_INVALID_AMOUNT)
       assert(env.isValidAccountID(escrow_account_id), ERR_INVALID_ACCOUNT_ID)
       const owner_id = Context.predecessor
@@ -154,7 +155,7 @@ export function inc_allowance(escrow_account_id: AccountId, amount: Amount): voi
       } else {
         allowanceRegistry.delete(keyFrom(owner_id, escrow_account_id))
       }
-      
+      return true
     }
   
   
@@ -170,7 +171,7 @@ export function inc_allowance(escrow_account_id: AccountId, amount: Amount): voi
    * @param new_owner_id
    * @param amount
    */
-  export function transfer_from(owner_id: AccountId, new_owner_id: AccountId,  amount: Amount): void {
+  export function transfer_from(owner_id: AccountId, new_owner_id: AccountId,  amount: Amount): boolean {
     assert(amount > u128.Zero, ERR_INVALID_AMOUNT)
     assert(env.isValidAccountID(owner_id), ERR_INVALID_ACCOUNT_ID)
     assert(env.isValidAccountID(new_owner_id), ERR_INVALID_ACCOUNT_ID)
@@ -195,7 +196,10 @@ export function inc_allowance(escrow_account_id: AccountId, amount: Amount): voi
 
     //record transfer event
     let spender = Context.predecessor
+    logging.log('token transfer amount')
+    logging.log(amount)
     recordTransferEvent(spender, owner_id, new_owner_id, amount)
+    return true
   }
   
   
@@ -209,10 +213,11 @@ export function inc_allowance(escrow_account_id: AccountId, amount: Amount): voi
    */
   // it bugs me that we have both of these when we decided we didn't need both for NFT
   // but i guess that's part of the spec
-  export function transfer(new_owner_id: AccountId, amount: Amount): void {
+  export function transfer(new_owner_id: AccountId, amount: Amount): boolean {
     assert(env.isValidAccountID(new_owner_id), ERR_INVALID_ACCOUNT_ID)
     const owner_id = Context.predecessor
     transfer_from(owner_id, new_owner_id, amount)
+    return true
   }
   
 // VIEW METHODS
@@ -345,4 +350,22 @@ export function getOwner(): string {
  */
 export function getInit(): string {
   return storage.getSome<string>("init")
+}
+
+// Event Retrieval View Methods
+
+/**
+ * returns all Transfer Events
+ */
+export function getAllTransferEvents(): Array<TransferEvent> {
+  let _transferList = new Array<TransferEvent>();
+  logging.log(transferEvents)
+  logging.log(transferEvents.length)
+  if(transferEvents.length != 0) {
+    for(let i: i32 = 0; i < transferEvents.length; i++) {
+      logging.log(transferEvents)
+      _transferList.push(transferEvents[i]);
+    }
+  }
+  return _transferList;
 }

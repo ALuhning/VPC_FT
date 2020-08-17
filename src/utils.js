@@ -28,7 +28,8 @@ export async function initContract() {
       'getPrecision',
       'getInitialSupply',
       'getOwner',
-      'getInit'
+      'getInit',
+      'getAllTransferEvents'
     ],
     // Change methods can modify the state. But you don't receive the returned value when called.
     changeMethods: [

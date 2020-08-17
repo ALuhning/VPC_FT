@@ -25,9 +25,25 @@ export default function App() {
   const [tokenName, setTokenName] = useState()
   const [tokenSymbol, setTokenSymbol] = useState()
   const [precision, setPrecision] = useState()
+  const [transferEvents, setTransferEvents] = useState([])
+  const [transfers, setTransfers] = useState(false)
 
   function handleInitChange(newState) {
     setInit(newState)
+  }
+
+  function handleOwnerChange(newOwner) {
+    setTokenOwner(newOwner)
+  }
+
+  async function handleSupplyChange() {
+    try {
+    let currentSupply = await window.contract.get_total_supply()
+    setTotalSupply(currentSupply)
+    return true
+    } catch (err) {
+    return false
+    }
   }
 
   // The useEffect hook can be used to fire side-effects during render
@@ -107,12 +123,30 @@ export default function App() {
             res ? setInit(true) : setInit(false)
             setDone(true)
           })
+
+        async function fetchTransferData() {
+          try {
+            let transfers = await window.contract.getAllTransferEvents()
+            console.log('transfers', transfers)
+            if(transfers.length != 0) {
+              setTransferEvents(transfers)
+            }
+          } catch (err) {
+            console.log('error retrieving transfers')
+            return false
+          }
+        }
+        
+        fetchTransferData()
+          .then((res) => {
+            console.log('transfer records exist', res)
+          })
       }
     },
 
     // The second argument to useEffect tells React when to re-run the effect
     // it compares current value and if different - re-renders
-    [initialized]
+    [initialized, tokenOwner]
   )
 
   // if not signed in, return early with sign-in component
@@ -136,12 +170,15 @@ export default function App() {
     } else {
       return (
         <TokenData
+          handleOwnerChange={handleOwnerChange}
+          handleSupplyChange={handleSupplyChange}
           accountId={accountId}
           tokenName={tokenName} 
           tokenSymbol={tokenSymbol}
           currentSupply={totalSupply}
           tokenOwner={tokenOwner}
           done={done}
+          transferEvents={transferEvents}
           />
       )
     }

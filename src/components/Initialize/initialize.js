@@ -17,11 +17,8 @@ import Card from '@material-ui/core/Card'
 
 const useStyles = makeStyles((theme) => ({
   root: {
-    flexGrow: 1,
-    margin: 'auto',
-    marginTop: 50,
-    minHeight: 550
-    
+   
+    marginTop: 50
   },
   paper: {
     padding: theme.spacing(2),

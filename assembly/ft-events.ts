@@ -1,6 +1,6 @@
 //@nearBindgen
 
-const DEBUG = false;
+const DEBUG = true;
 
 import { Context, u128, PersistentDeque, logging } from "near-sdk-as";
 
@@ -25,12 +25,14 @@ import { Context, u128, PersistentDeque, logging } from "near-sdk-as";
  * event Transfer(address indexed _from, address indexed _to, uint256 _value)
  *
  */
+@nearBindgen
 export class TransferEvent {
-  constructor(
-    public spender: string,
-    public from: string,
-    public to: string,
-    public value: u128) {}
+  id: u64;
+  spender: string;
+  from: string;
+  to: string;
+  value: u128;
+  date: u64;
 }
 
 
@@ -91,7 +93,7 @@ export class OwnerTransferEvent {
   }
 
 // setup a queue for transfer events
-const transferEvents = new PersistentDeque<TransferEvent>("xfr");
+export const transferEvents = new PersistentDeque<TransferEvent>("xfr");
 
 // setup a queue for approval events
 const approvalEvents = new PersistentDeque<ApprovalEvent>("apr");
@@ -116,8 +118,14 @@ const ownerTransferEvents = new PersistentDeque<OwnerTransferEvent>("oxfr")
  */
 export function recordTransferEvent(spender: string, from: string, to: string, value: u128): void {
   DEBUG ? logging.log("[call] recordTransferEvent(" + spender + ", " + from + ", " + to + ", " + value.toString() + ")") : false;
-  const transfer = new TransferEvent(spender, from, to, value);
-  transferEvents.pushFront(transfer)
+  const transfer = new TransferEvent();
+  transfer.id = <u64>(transferEvents.length + 1);
+  transfer.spender = spender;
+  transfer.from = from;
+  transfer.to = to;
+  transfer.value = value;
+  transfer.date = <u64>Context.blockIndex;
+  transferEvents.pushFront(transfer);
 }
 
 /**
