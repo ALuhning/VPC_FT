@@ -14,9 +14,7 @@ Project Demo
 
 Here's a video demo of the fungible token creator on NEAR and administration wallet that you'll build in the course:
 
-<figure class="video_container">
-  <iframe src="https://www.youtube.com/embed/CGhPRDT1lnw" frameborder="0" allowfullscreen="true"></iframe>
-</figure>
+[![Vital Point Guild - Fungible Token Creation on NEAR](https://i9.ytimg.com/vi/CGhPRDT1lnw/mqdefault.jpg?sqp=CMzfivoF&rs=AOn4CLDvBlQam5WOKO8LIh3PHIl6T-5MUA)](https://youtu.be/CGhPRDT1lnw "Building and Issuing Fungible Tokens on NEAR")
 
 
 
