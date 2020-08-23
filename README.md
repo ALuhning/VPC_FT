@@ -1,3 +1,5 @@
+![Vital Point Guild](https://vitalpoint.ai/wp-content/uploads/2020/08/header-github.png)
+
 ## BUILDING AND ISSUING FUNGIBLE TOKENS ON NEAR
 ----
 
