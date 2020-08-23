@@ -15,7 +15,7 @@ Project Demo
 Here's a video demo of the fungible token creator on NEAR and administration wallet that you'll build in the course:
 
 <figure class="video_container">
-  <iframe src="https://www.youtube.com/embed/CGhPRDT1lnw" frameborder="0" allowfullscreen="true"> </iframe>
+  <iframe src="https://www.youtube.com/embed/CGhPRDT1lnw" frameborder="0" allowfullscreen="true"></iframe>
 </figure>
 
 
