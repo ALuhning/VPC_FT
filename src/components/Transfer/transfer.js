@@ -38,7 +38,12 @@ export default function Transfer(props) {
 
   const classes = useStyles()
   const { register, handleSubmit, watch, errors } = useForm()
-  const { handleTransferClickState } = props
+  const { handleTransferClickState, 
+    handleTransferEventChange, 
+    transferEvents,
+    tokenOwner,
+    accountId,
+    accountBalance } = props
 
   const handleClickOpen = () => {
     setOpen(true)
@@ -59,13 +64,24 @@ export default function Transfer(props) {
                         new_owner_id: sendTo,
                         amount: amount
                     }, process.env.DEFAULT_GAS_VALUE)
-    if(finished) {
+    let changed = await handleTransferEventChange()
+    if(finished && changed) {
         setFinished(true)
         setOpen(false)
         handleTransferClickState(false)
     }
 }
 
+function validate(value) {
+  console.log('accountid', accountId)
+  if (value != accountId) {
+    return true
+  } else {
+    return false
+  }
+}
+console.log('errors', errors)
+console.log('accountbalance', accountBalance)
   return (
     <div>
       
@@ -74,7 +90,7 @@ export default function Transfer(props) {
         <DialogContent>
         {!finished ? <LinearProgress className={classes.progress} /> : (
           <DialogContentText style={{marginBottom: 10}}>
-            Transfer tokens to another account.  
+            Transfer tokens to another account.
           </DialogContentText>)}
           
           <TextField
@@ -86,10 +102,12 @@ export default function Transfer(props) {
             label="Account Id to Transfer to"
             inputRef={register({
                 required: true,
+                validate: value => value != accountId || <p style={{color:'red'}}>Can not transfer to yourself, please enter a new account</p>
             })}
-            placeholder="e.g. newOwner.testnet"
+            placeholder="e.g. otherAccount.testnet"
             fullWidth
           />
+          {errors.sendTo?.message}
 
           <TextField
             id="amount"
@@ -99,13 +117,15 @@ export default function Transfer(props) {
             label="Amount"
             placeholder="e.g. 1000000000"
             inputRef={register({
-                required: true, 
+                required: true,
+                validate: value => value <= parseInt(accountBalance) || <p style={{color: 'red'}}>You do not have that many tokens to transfer, please lower your transfer amount below your current balance of {accountBalance}.</p>
             })}
             InputProps={{
                 endAdornment: <InputAdornment position="end">Tokens</InputAdornment>,
                 }}
             fullWidth
             />
+            {errors.amount?.message}
 
         </DialogContent>
         <DialogActions>

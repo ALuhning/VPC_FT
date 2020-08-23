@@ -1,4 +1,5 @@
 import 'regenerator-runtime/runtime'
+import 'fontsource-roboto';
 import React, { useState, useEffect } from 'react'
 
 // Material UI imports
@@ -24,9 +25,13 @@ export default function App() {
   const [totalSupply, setTotalSupply] = useState()
   const [tokenName, setTokenName] = useState()
   const [tokenSymbol, setTokenSymbol] = useState()
+  const [accountBalance, setAccountBalance] = useState()
   const [precision, setPrecision] = useState()
   const [transferEvents, setTransferEvents] = useState([])
-  const [transfers, setTransfers] = useState(false)
+  const [mintEvents, setMintEvents] = useState([])
+  const [burnEvents, setBurnEvents] = useState([])
+  const [ownerTransferEvents, setOwnerTransferEvents] = useState([])
+  const [tabValue, setTabValue] = useState('1')
 
   function handleInitChange(newState) {
     setInit(newState)
@@ -44,6 +49,34 @@ export default function App() {
     } catch (err) {
     return false
     }
+  }
+
+  async function handleTransferEventChange() {
+    try {
+      let currentTransferEvents = await window.contract.getAllTransferEvents()
+      if(currentTransferEvents){
+        setTransferEvents(currentTransferEvents)
+      }
+      return true
+    } catch (err) {
+      return false
+    }
+  }
+
+  async function handleMintEventChange() {
+    try {
+      let currentMintEvents = await window.contract.getAllMintEvents()
+      if(currentMintEvents){
+        setMintEvents(currentMintEvents)
+      }
+      return true
+    } catch (err) {
+      return false
+    }
+  }
+
+  function handleTabValueState(value) {
+    setTabValue(value)
   }
 
   // The useEffect hook can be used to fire side-effects during render
@@ -66,7 +99,14 @@ export default function App() {
             console.log('token name not set yet')
             return false
           }
-          
+          try {
+            // window.contract is set in utils.js after being called by initContract in index.js
+            let balance = await window.contract.get_balance({owner_id: window.accountId})
+            setAccountBalance(balance)
+          } catch (err) {
+            console.log('no balance')
+            return false
+          }
           // retrieve Token Symbol and set state
           try {
             let symbol = await window.contract.getTokenSymbol()
@@ -141,6 +181,60 @@ export default function App() {
           .then((res) => {
             console.log('transfer records exist', res)
           })
+
+        async function fetchMintData() {
+          try {
+            let mints = await window.contract.getAllMintEvents()
+            console.log('mints', mints)
+            if(mints.length != 0) {
+              setMintEvents(mints)
+            }
+          } catch (err) {
+            console.log('error retrieving mint events')
+            return false
+          }
+        }
+        
+        fetchMintData()
+          .then((res) => {
+            console.log('minting records exist', res)
+          })
+
+        async function fetchBurnData() {
+          try {
+            let burns = await window.contract.getAllBurnEvents()
+            console.log('burns', burns)
+            if(burns.length != 0) {
+              setBurnEvents(burns)
+            }
+          } catch (err) {
+            console.log('error retrieving burn events')
+            return false
+          }
+        }
+        
+        fetchBurnData()
+          .then((res) => {
+            console.log('burn records exist', res)
+          })
+
+        async function fetchOwnerTransferData() {
+          try {
+            let ots = await window.contract.getAllOwnerTransferEvents()
+            console.log('ownership transfers', ots)
+            if(ots.length != 0) {
+              setOwnerTransferEvents(ots)
+            }
+          } catch (err) {
+            console.log('error retrieving ownership transfer events')
+            return false
+          }
+        }
+        
+        fetchOwnerTransferData()
+          .then((res) => {
+            console.log('owner transfer records exist', res)
+          })
       }
     },
 
@@ -153,6 +247,51 @@ export default function App() {
   if (!window.walletConnection.isSignedIn()) {
     return (<SignIn />)
   }
+
+  async function poll() {
+    const latestHash = (await window.near.connection.provider.status()).sync_info.latest_block_hash;
+      console.log('latest Hash', latestHash)
+    const latestBlock = await near.connection.provider.block(latestHash);
+    console.log('latestBlock', latestBlock)
+
+    let startBlockId = await latestBlock.header.hash
+    console.log('start block Id', startBlockId)
+    let stopBlockId = 1
+    let i = 0
+    let currentBlockId = startBlockId
+    let currentBlock = latestBlock
+    while(currentBlockId != stopBlockId) {
+      currentBlock = await near.connection.provider.block(currentBlockId)
+      console.log('current block id', currentBlockId)
+      const changes = await fetch('https://rpc.testnet.near.org', {
+        method: 'POST',
+        mode: 'cors',
+        cache: 'no-cache',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: "icare",
+          method: "EXPERIMENTAL_changes",
+          params: {
+            "block_id": currentBlockId,
+            "changes_type": "data_changes",
+            "account_ids": ["vpc.vitalpointai.testnet"],
+            "key_prefix_base64": "U1RBVEU="
+          },
+        })
+      })
+      const jsonChanges = await changes.json()
+      console.log('aloha jsonChanges', jsonChanges)
+      const onlyChanges = jsonChanges.result.changes.map(c => c.change.value_base64)
+      console.log('onlyChanges', onlyChanges)
+      currentBlockId = await currentBlock.header.prev_hash
+    }
+  }
+
+  //window.setInterval(poll, 2000)
 
   // if not done loading all the data, show a progress bar, otherwise show the content
   if(!done) {
@@ -172,13 +311,21 @@ export default function App() {
         <TokenData
           handleOwnerChange={handleOwnerChange}
           handleSupplyChange={handleSupplyChange}
+          handleTransferEventChange={handleTransferEventChange}
+          handleTabValueState={handleTabValueState}
           accountId={accountId}
           tokenName={tokenName} 
           tokenSymbol={tokenSymbol}
           currentSupply={totalSupply}
+          initialSupply={initialSupply}
           tokenOwner={tokenOwner}
           done={done}
           transferEvents={transferEvents}
+          mintEvents={mintEvents}
+          burnEvents={burnEvents}
+          ownerTransferEvents={ownerTransferEvents}
+          accountBalance={accountBalance}
+          tabValue={tabValue}
           />
       )
     }

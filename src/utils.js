@@ -7,6 +7,7 @@ const nearConfig = getConfig(process.env.NODE_ENV || 'development')
 export async function initContract() {
   // Initialize connection to the NEAR testnet
   const near = await connect(Object.assign({ deps: { keyStore: new keyStores.BrowserLocalStorageKeyStore() } }, nearConfig))
+  window.near = near
 
   // Initializing Wallet based Account. It can work with NEAR testnet wallet that
   // is hosted at https://wallet.testnet.near.org
@@ -29,7 +30,10 @@ export async function initContract() {
       'getInitialSupply',
       'getOwner',
       'getInit',
-      'getAllTransferEvents'
+      'getAllTransferEvents',
+      'getAllMintEvents',
+      'getAllBurnEvents',
+      'getAllOwnerTransferEvents'
     ],
     // Change methods can modify the state. But you don't receive the returned value when called.
     changeMethods: [
@@ -59,4 +63,8 @@ export function login() {
   // This works by creating a new access key for the user's account and storing
   // the private key in localStorage.
   window.walletConnection.requestSignIn(nearConfig.contractName)
+}
+
+export function info() {
+  
 }

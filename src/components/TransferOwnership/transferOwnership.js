@@ -36,7 +36,7 @@ export default function TransferOwnership(props) {
 
   const classes = useStyles()
   const { register, handleSubmit, watch, errors } = useForm()
-  const { handleOwnerChange, handleTransferOwnershipClickState } = props
+  const { handleOwnerChange, handleTransferOwnershipClickState, accountId } = props
 
   const handleClickOpen = () => {
     setOpen(true)
@@ -86,10 +86,12 @@ export default function TransferOwnership(props) {
             label="New Owner Account Id"
             inputRef={register({
                 required: true,
+                validate: value => value != accountId || <p style={{color:'red'}}>Can not transfer ownership to yourself, please enter a new account.</p>
             })}
             placeholder="e.g. newOwner.testnet"
             fullWidth
           />
+          {errors.newOwner?.message}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleSubmit(onSubmit)} color="primary" type="submit">

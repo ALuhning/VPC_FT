@@ -38,10 +38,11 @@ export default function Mint(props) {
 
   const classes = useStyles()
   const { register, handleSubmit, watch, errors } = useForm()
-  const { currentSupply, handleMintClickState, handleSupplyChange } = props
+  const { currentSupply, handleMintClickState, handleSupplyChange, handleTabValueState } = props
 
   const handleClose = () => {
     handleMintClickState(false)
+    handleTabValueState('2')
     setOpen(false)
   }
 
@@ -49,6 +50,8 @@ export default function Mint(props) {
     event.preventDefault()
     const { amount } = values
     setFinished(false)
+    handleTabValueState('2')
+    
     console.log('values', values)
  
     let finished = await window.contract.mint({
@@ -83,12 +86,14 @@ export default function Mint(props) {
             label="Amount"
             placeholder="e.g. 1000000000"
             inputRef={register({
-                required: true, 
+                required: true,
+                validate: value => value >= 0 || <p style={{color: 'red'}}>Mint amount must be greater than zero.</p>
             })}
             InputProps={{
                 endAdornment: <InputAdornment position="end">Tokens</InputAdornment>,
                 }}
             />
+            {errors.amount?.message}
 
         </DialogContent>
         <DialogActions>

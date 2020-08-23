@@ -84,11 +84,13 @@ export default function Burn(props) {
             placeholder="e.g. 1000000000"
             inputRef={register({
                 required: true, 
+                validate: value => value >= 0 || <p style={{color: 'red'}}>Burn amount must be greater than zero.</p>
             })}
             InputProps={{
                 endAdornment: <InputAdornment position="end">Tokens</InputAdornment>,
                 }}
             />
+            {errors.amount?.message}
 
         </DialogContent>
         <DialogActions>

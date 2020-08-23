@@ -1,0 +1,15 @@
+.MuiToolbar-gutters {
+    padding: 0px !important
+}
+
+.MuiTablePagination-root {
+    overflow: visible !important
+}
+
+.MuiTablePagination-selectRoot {
+    margin-right: 16px !important
+}
+
+.MuiTabPanel-root {
+    padding: 0px !important
+}

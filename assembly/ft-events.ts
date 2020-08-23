@@ -63,49 +63,59 @@ export class ApprovalEvent {
  * MUST trigger when tokens are minted including zero value mints.
  *
  */
+// export class MintEvent {
+//   constructor(
+//     public owner: string,
+//     public value: u128) {}
+// }
+@nearBindgen
 export class MintEvent {
-    constructor(
-      public owner: string,
-      public value: u128) {}
-  }
+    id: u64;
+    owner: string;
+    value: u128;
+    date: u64;
+}
 
 /**
  * Burn
  * MUST trigger when tokens are burned including zero value burns.
  *
  */
+@nearBindgen
 export class BurnEvent {
-    constructor(
-      public owner: string,
-      public value: u128) {}
-  }
+    id: u64;
+    owner: string;
+    value: u128;
+    date: u64;
+}
 
   /**
  * Ownership Transfer
  * MUST trigger when token ownership is transferred.
  *
  */
+@nearBindgen
 export class OwnerTransferEvent {
-    constructor(
-      public owner: string,
-      public newOwner: string,
-      public date: u64) {}
-  }
+    id: u64;
+    owner: string;
+    newOwner: string;
+    date: u64;
+}
 
 // setup a queue for transfer events
 export const transferEvents = new PersistentDeque<TransferEvent>("xfr");
 
 // setup a queue for approval events
-const approvalEvents = new PersistentDeque<ApprovalEvent>("apr");
+export const approvalEvents = new PersistentDeque<ApprovalEvent>("apr");
 
 // setup a queue for mint events
-const mintEvents = new PersistentDeque<MintEvent>("mint");
+export const mintEvents = new PersistentDeque<MintEvent>("mint");
 
 // setup a queue for burn events
-const burnEvents = new PersistentDeque<BurnEvent>("burn");
+export const burnEvents = new PersistentDeque<BurnEvent>("burn");
 
 // setup a queue for ownership transfers
-const ownerTransferEvents = new PersistentDeque<OwnerTransferEvent>("oxfr")
+export const ownerTransferEvents = new PersistentDeque<OwnerTransferEvent>("oxfr")
 
 /**
  * This function records transfer events since NEAR doesn't currently support
@@ -196,7 +206,11 @@ export function getNewestApprovalEvent(): ApprovalEvent {
  */
 export function recordMintEvent(owner: string, value: u128): void {
     DEBUG ? logging.log("[call] recordMintEvent(" + owner + ", " + value.toString() + ")") : false;
-    const mint = new MintEvent(owner, value);
+    const mint = new MintEvent();
+    mint.id = <u64>(mintEvents.length + 1);
+    mint.owner = owner;
+    mint.value = value;
+    mint.date = <u64>Context.blockIndex;
     mintEvents.pushFront(mint)
   }
 
@@ -209,7 +223,11 @@ export function recordMintEvent(owner: string, value: u128): void {
  */
 export function recordBurnEvent(owner: string, value: u128): void {
     DEBUG ? logging.log("[call] recordBurnEvent(" + owner + ", " + value.toString() + ")") : false;
-    const burn = new BurnEvent(owner, value);
+    const burn = new BurnEvent();
+    burn.id = <u64>(burnEvents.length + 1);
+    burn.owner = owner;
+    burn.value = value;
+    burn.date = <u64>Context.blockIndex;
     burnEvents.pushFront(burn)
   }
 
@@ -222,7 +240,10 @@ export function recordBurnEvent(owner: string, value: u128): void {
  */
 export function recordOwnershipTransferEvent(owner: string, newOwner: string): void {
     DEBUG ? logging.log("[call] recordOwnershipTransferEvent(" + owner + ", " + newOwner + ")") : false
-    const newDate = Context.blockIndex
-    const ownerTransfer = new OwnerTransferEvent(owner, newOwner, newDate)
+    const ownerTransfer = new OwnerTransferEvent();
+    ownerTransfer.id = <u64>(ownerTransferEvents.length + 1);
+    ownerTransfer.owner = owner;
+    ownerTransfer.newOwner = newOwner;
+    ownerTransfer.date = <u64>Context.blockIndex;
     ownerTransferEvents.pushFront(ownerTransfer)
   }

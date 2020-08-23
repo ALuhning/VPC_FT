@@ -3,7 +3,7 @@
 import { Context, storage, logging, env, u128, PersistentDeque } from "near-sdk-as"
 import { AccountId, Amount } from './ft-types'
 import { supply, allowanceRegistry, balanceRegistry } from './ft-models'
-import { transferEvents, TransferEvent } from './ft-events'
+import { transferEvents, TransferEvent, mintEvents, MintEvent, burnEvents, BurnEvent, OwnerTransferEvent, ownerTransferEvents } from './ft-events'
 
 import {
     ERR_INVALID_AMOUNT,
@@ -17,7 +17,9 @@ import {
     ERR_DECREMENT_LESS_THAN_ZERO,
     ERR_TOKEN_ALREADY_MINTED,
     ERR_NOT_OWNER,
-    ERR_NOT_ENOUGH_TOKENS
+    ERR_NOT_ENOUGH_TOKENS,
+    ERR_SEND_YOURSELF,
+    ERR_POSITIVE
 } from './ft-error-messages'
 
 import {
@@ -173,6 +175,7 @@ export function inc_allowance(escrow_account_id: AccountId, amount: Amount): boo
    */
   export function transfer_from(owner_id: AccountId, new_owner_id: AccountId,  amount: Amount): boolean {
     assert(amount > u128.Zero, ERR_INVALID_AMOUNT)
+    assert(owner_id != new_owner_id, ERR_SEND_YOURSELF)
     assert(env.isValidAccountID(owner_id), ERR_INVALID_ACCOUNT_ID)
     assert(env.isValidAccountID(new_owner_id), ERR_INVALID_ACCOUNT_ID)
     assert(balanceRegistry.contains(owner_id), ERR_INVALID_ACCOUNT)
@@ -214,6 +217,7 @@ export function inc_allowance(escrow_account_id: AccountId, amount: Amount): boo
   // it bugs me that we have both of these when we decided we didn't need both for NFT
   // but i guess that's part of the spec
   export function transfer(new_owner_id: AccountId, amount: Amount): boolean {
+    assert(new_owner_id != Context.predecessor, ERR_SEND_YOURSELF)
     assert(env.isValidAccountID(new_owner_id), ERR_INVALID_ACCOUNT_ID)
     const owner_id = Context.predecessor
     transfer_from(owner_id, new_owner_id, amount)
@@ -269,12 +273,13 @@ export function inc_allowance(escrow_account_id: AccountId, amount: Amount): boo
   */
  export function burn(tokens: u128): boolean {
     assert(isOwner(Context.predecessor), ERR_NOT_OWNER)
+    assert(tokens > u128.Zero, ERR_POSITIVE)
     const balance = get_balance(Context.predecessor)
     assert(balance >= tokens, ERR_NOT_ENOUGH_TOKENS)
     let currentSupply = supply.getSome('totalSupply')
     supply.set('totalSupply', u128.sub(currentSupply, tokens))
     balanceRegistry.set(Context.predecessor, u128.sub(balance , tokens))
-    recordTransferEvent(Context.predecessor, '0x0', Context.predecessor, tokens)
+    recordTransferEvent(Context.predecessor, Context.predecessor, '0x0', tokens)
     recordBurnEvent(Context.predecessor, tokens)
     return true;
   }
@@ -285,6 +290,7 @@ export function inc_allowance(escrow_account_id: AccountId, amount: Amount): boo
  */
   export function mint(tokens: u128): boolean {
     assert(isOwner(Context.predecessor), ERR_NOT_OWNER)
+    assert(tokens > u128.Zero, ERR_POSITIVE)
     let currentSupply = supply.getSome('totalSupply')
     supply.set('totalSupply', u128.add(currentSupply, tokens))
     let currentBalance = get_balance(Context.predecessor)
@@ -300,7 +306,10 @@ export function inc_allowance(escrow_account_id: AccountId, amount: Amount): boo
  */  
   export function transferOwnership(newOwner: AccountId): boolean {
     assert(isOwner(Context.predecessor), ERR_NOT_OWNER)
+    assert(newOwner != Context.predecessor, ERR_SEND_YOURSELF)
     assert(env.isValidAccountID(newOwner), ERR_INVALID_ACCOUNT_ID)
+    let currentBalance = get_balance(Context.predecessor)
+    transfer(newOwner, currentBalance);
     storage.set<string>("owner", newOwner);
     recordOwnershipTransferEvent(Context.predecessor, newOwner)
     return true;
@@ -368,4 +377,52 @@ export function getAllTransferEvents(): Array<TransferEvent> {
     }
   }
   return _transferList;
+}
+
+/**
+ * returns all Minting Events
+ */
+export function getAllMintEvents(): Array<MintEvent> {
+  let _mintList = new Array<MintEvent>();
+  logging.log(mintEvents)
+  logging.log(mintEvents.length)
+  if(mintEvents.length != 0) {
+    for(let i: i32 = 0; i < mintEvents.length; i++) {
+      logging.log(mintEvents)
+      _mintList.push(mintEvents[i]);
+    }
+  }
+  return _mintList;
+}
+
+/**
+ * returns all Burn Events
+ */
+export function getAllBurnEvents(): Array<BurnEvent> {
+  let _burnList = new Array<BurnEvent>();
+  logging.log(burnEvents)
+  logging.log(burnEvents.length)
+  if(burnEvents.length != 0) {
+    for(let i: i32 = 0; i < burnEvents.length; i++) {
+      logging.log(burnEvents)
+      _burnList.push(burnEvents[i]);
+    }
+  }
+  return _burnList;
+}
+
+/**
+ * returns all Ownership Transfer Events
+ */
+export function getAllOwnerTransferEvents(): Array<OwnerTransferEvent> {
+  let _otList = new Array<OwnerTransferEvent>();
+  logging.log(ownerTransferEvents)
+  logging.log(ownerTransferEvents.length)
+  if(ownerTransferEvents.length != 0) {
+    for(let i: i32 = 0; i < ownerTransferEvents.length; i++) {
+      logging.log(ownerTransferEvents)
+      _otList.push(ownerTransferEvents[i]);
+    }
+  }
+  return _otList;
 }

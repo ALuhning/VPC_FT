@@ -1,8 +1,9 @@
-import React from 'react'
+import React, { useState } from 'react'
 import LogoutButton from '../../components/common/LogoutButton/logoutButton'
 import TransferOwnership from '../../components/TransferOwnership/transferOwnership'
 import ActionSelector from '../ActionSelector/actionSelector'
 import TransferList from '../TransferList/transferList'
+import BalanceChart from '../BalanceGraphs/balanceGraph'
 
 // Material UI imports
 import { makeStyles } from '@material-ui/core/styles'
@@ -11,6 +12,10 @@ import Typography from '@material-ui/core/Typography'
 import Grid from '@material-ui/core/Grid'
 import Divider from '@material-ui/core/Divider'
 import Paper from '@material-ui/core/Paper'
+import Chip from '@material-ui/core/Chip'
+import AccountCircleTwoToneIcon from '@material-ui/icons/AccountCircleTwoTone'
+import AccountBalanceWalletTwoToneIcon from '@material-ui/icons/AccountBalanceWalletTwoTone'
+import Tooltip from '@material-ui/core/Tooltip'
 
 const useStyles = makeStyles((theme) => ({
     root: {
@@ -40,22 +45,34 @@ const useStyles = makeStyles((theme) => ({
   }));
 
 export default function TokenData(props) {
-    const classes = useStyles();
+    const [graphData, setGraphData] = useState([])
+
+    const classes = useStyles()
+    
 
     const { tokenName, 
       tokenSymbol, 
       precision, 
       initialSupply, 
-      currentSupply, 
+      currentSupply,
+      accountBalance, 
       tokenOwner, 
       accountId,
       transferEvents,
-      handleOwnerChange, 
+      mintEvents,
+      burnEvents,
+      ownerTransferEvents,
+      tabValue,
+      handleOwnerChange,
+      handleTransferEventChange,
+      handleTabValueState, 
       handleSupplyChange } = props
-    
+
+    let thisAccountBalance = 'Current Balance: ' + accountBalance
+
     return (
        
-        <Grid container spacing={3}>
+        <Grid container>
         <Grid item xs={12}>
           <Paper className={classes.paper}>
           <Grid container >
@@ -66,56 +83,70 @@ export default function TokenData(props) {
            
           </Grid>
             <Typography variant="h5" component="h1" style={{marginTop: 20, marginBottom: 20}}>
-                    {tokenName}
+                    {tokenName + '  '}<Chip color="primary" size="small" label={tokenSymbol} />
               </Typography>
-              <Grid container direction="row" justify="space-evenly" style={{marginBottom:10}}>
-              <Grid item xs={12} sm={12} md={4} lg={4} xl={4} />
-              <Grid item xs={12} sm={12} md={4} lg={3} xl={3} >
-                    {tokenOwner==accountId ? <ActionSelector currentSupply={currentSupply} handleOwnerChange={handleOwnerChange} handleSupplyChange={handleSupplyChange} />: null} 
+
+            <Grid container direction="row" justify="space-evenly" style={{marginBottom:10, marginTop: 10}}>
+                <Grid item xs={10} sm={6} md={4} lg={3} xl={3} >
+                     <ActionSelector currentSupply={currentSupply} 
+                        handleOwnerChange={handleOwnerChange} 
+                        handleSupplyChange={handleSupplyChange} 
+                        handleTransferEventChange={handleTransferEventChange}
+                        handleTabValueState={handleTabValueState}
+                        tokenOwner={tokenOwner}
+                        accountId={accountId}
+                        accountBalance={accountBalance}
+                      /> 
+                </Grid>
+            </Grid>
+
+            <Grid container>
+              <Grid item xs={12} sm={12} md={12} lg={12} xl={12} >
+                <Tooltip title="Account Balance" placement="right">
+                  <Chip variant="outlined" label={thisAccountBalance} style={{marginBottom: 10}}/>
+                </Tooltip>
               </Grid>
-              <Grid item xs={12} sm={12} md={4} lg={4} xl={4} />
             </Grid>
-            <Grid container className={classes.root} spacing={2}>
         
-            <Grid item xs={12} sm={12} md={4} lg={4} xl={4}>
-            
-            <Card className={classes.customCard} variant="outlined">
-                <Typography className={classes.title} color="textSecondary" gutterBottom>
-                    Symbol
-                </Typography>
-                <Typography variant="h5" component="h2">
-                    {tokenSymbol}
-              </Typography>
-            </Card>
+            <Grid container>
+              <Grid item xs={12} sm={12} md={12} lg={12} xl={12} >
+                <TransferList 
+                  transferEvents={transferEvents} 
+                  mintEvents={mintEvents}
+                  burnEvents={burnEvents}
+                  ownerTransferEvents={ownerTransferEvents}
+                  tokenOwner={tokenOwner} 
+                  accountId={accountId} 
+                  initialSupply={initialSupply} 
+                  accountBalance={accountBalance}
+                  handleTabValueState={handleTabValueState}
+                  tabValue={tabValue}
+                />
+              </Grid>
             </Grid>
-            <Grid item xs={12} sm={12} md={4} lg={4} xl={4}>
-            <Card className={classes.customCard} variant="outlined">
-                <Typography className={classes.title} color="textSecondary" gutterBottom>
-                    Current Supply
-                </Typography>
-                <Typography variant="h5" component="h2">
-                    {currentSupply}
-              </Typography>
-        </Card>
-        
+              
+     
+      <Divider style={{marginBottom: 10}}/>
+
+       <Grid container className={classes.root} spacing={1}>
+        <Grid item xs={6} sm={6} md={6} lg={6} xl={6}>
+          <Typography variant="button" display="block">Total Supply</Typography>
+         
+            <Chip variant="outlined" icon={<AccountBalanceWalletTwoToneIcon />} label={currentSupply} style={{marginRight: 5}}/>
+    
         </Grid>
-        <Grid item xs={12} sm={12} md={4} lg={4} xl={4}>
-        <Card className={classes.customCard} variant="outlined">
-            <Typography className={classes.title} color="textSecondary" gutterBottom>
-                Owner
-            </Typography>
-            <Typography variant="h5" component="h2">
-                {tokenOwner}
-          </Typography>
-        </Card>
+
+        <Grid item xs={6} sm={6} md={6} lg={6} xl={6}>
+         <Typography variant="button" display="block">Token Owner</Typography>
+         
+           <Chip variant="outlined" icon={<AccountCircleTwoToneIcon />} label={tokenOwner} />
+ 
         </Grid>
-        
-        </Grid>
-        <Divider variant="middle" style={{marginTop: 30, marginBottom: 30}}/>
-        <TransferList transferEvents={transferEvents} />
-        </Paper>
-         </Grid>
-       </Grid>
+      </Grid>
+
+     </Paper>
+     </Grid>
+   </Grid>
       
     )
     
