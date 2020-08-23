@@ -1,4 +1,4 @@
-![Vital Point Guild](https://vitalpoint.ai/wp-content/uploads/2020/08/header-github.png)
+[![Vital Point Guild](https://vitalpoint.ai/wp-content/uploads/2020/08/header-github.png)](https://vitalpoint.ai "Vital Point Guild")
 
 ## BUILDING AND ISSUING FUNGIBLE TOKENS ON NEAR
 ----
@@ -18,5 +18,5 @@ Here's a video demo of the fungible token creator on NEAR and administration wal
 
 [![Vital Point Guild - Fungible Token Creation on NEAR](https://i9.ytimg.com/vi/CGhPRDT1lnw/mqdefault.jpg?sqp=CMzfivoF&rs=AOn4CLDvBlQam5WOKO8LIh3PHIl6T-5MUA)](https://youtu.be/CGhPRDT1lnw "Building and Issuing Fungible Tokens on NEAR")
 
-
+[![Vital Point Guild](https://vitalpoint.ai/wp-content/uploads/2020/08/join-guild.png)](https://vitalpoint.ai "Vital Point Guild")
 
