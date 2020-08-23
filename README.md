@@ -1,4 +1,4 @@
-##BUILDING AND ISSUING FUNGIBLE TOKENS ON NEAR
+## BUILDING AND ISSUING FUNGIBLE TOKENS ON NEAR
 ----
 
 We're going to use NEAR's Fungible Token Standard (NEP-21), and Ethereum's ERC-20 standard as the basis for this project which will do the following:  
@@ -14,10 +14,9 @@ Project Demo
 
 Here's a video demo of the fungible token creator on NEAR and administration wallet that you'll build in the course:
 
-<!-- blank line -->
 <figure class="video_container">
   <iframe src="https://www.youtube.com/embed/CGhPRDT1lnw" frameborder="0" allowfullscreen="true"> </iframe>
 </figure>
-<!-- blank line -->
+
 
 
