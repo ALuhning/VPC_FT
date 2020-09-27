@@ -1,5 +1,5 @@
   
-// @nearfile
+
 import { Context, storage, logging, env, u128, PersistentDeque } from "near-sdk-as"
 import { AccountId, Amount } from './ft-types'
 import { supply, allowanceRegistry, balanceRegistry } from './ft-models'
@@ -114,14 +114,21 @@ export function isOwner(owner: AccountId): boolean {
 export function inc_allowance(escrow_account_id: AccountId, amount: Amount): boolean {
     assert(amount > u128.Zero, ERR_INVALID_AMOUNT)
     assert(env.isValidAccountID(escrow_account_id), ERR_INVALID_ACCOUNT_ID)
-    const owner_id = Context.predecessor
-    assert(escrow_account_id==owner_id, ERR_INCREMENT_ALLOWANCE_OWNER)
-  
+    
+    const owner_id = Context.sender
    
-    const balance = allowanceRegistry.get(keyFrom(owner_id, escrow_account_id))
-    if(u128.from(balance) > u128.Zero) {
+    assert(escrow_account_id!=owner_id, ERR_INCREMENT_ALLOWANCE_OWNER)
+
+    let lookup = allowanceRegistry.get(keyFrom(owner_id, escrow_account_id), u128.Zero)!
+
+    if(lookup == u128.Zero){
+      allowanceRegistry.set(keyFrom(owner_id, escrow_account_id), amount)
+    }
+    const balance = allowanceRegistry.getSome(keyFrom(owner_id, escrow_account_id))
+    
+    if(balance > u128.Zero) {
       allowanceRegistry.set(keyFrom(owner_id, escrow_account_id), u128.from(u128.add(u128.from(balance), u128.from(amount)).lo))
-      const newBalance = allowanceRegistry.get(keyFrom(owner_id, escrow_account_id))
+      const newBalance = allowanceRegistry.getSome(keyFrom(owner_id, escrow_account_id))
       if(balance && newBalance) {
         recordApprovalEvent(owner_id, escrow_account_id, balance, newBalance)
         }
